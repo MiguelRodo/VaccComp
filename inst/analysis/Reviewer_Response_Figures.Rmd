@@ -1,0 +1,372 @@
+---
+title: "PLOS Pathogens Review"
+output: html_document
+---
+
+```{r setup, message = FALSE, warning = FALSE, echo = FALSE}
+
+library(VaccComp)
+library(ggboot)
+library(plyr)
+library(tidyr)
+library(stringr)
+library(magrittr)
+library(dplyr)
+library(VaccCompData)
+library(cowplot)
+library(doParallel)
+
+knitr::opts_chunk$set(
+  collapse = FALSE,
+  comment = "#>", 
+  cache = TRUE, 
+  echo = TRUE,
+  message = FALSE, 
+  warning = FALSE, 
+  tidy = FALSE
+)
+```
+
+```{r save, echo = FALSE}
+save = TRUE
+getSavePath = function(x) str_c( "C:/Users/migue/Dropbox/Rodo et al Vaccine Immune Response paper/Figures/Final/R/", x, ".pdf" )
+```
+
+# Minor comments
+
+## 2.2 - Age effect
+
+### Size
+
+```{r 2.2-size-dataprep-both, eval = FALSE}
+ageTbl <- tmax17ExcTbl %>% 
+  filter( vaccine %in% c( 2, 3, 5 ) ) %>%
+  group_by( vaccine, prid, infxn, ptid ) %>%
+  summarise( resp = sum( resp ) ) %>%
+  ungroup() 
+
+ageTbl %>%
+  group_by( vaccine, prid, age ) %>%
+  slice(1) %>%
+  ungroup()
+
+ageTbl %<>%
+  mutate( age = -1 ) %>%
+  mutate( age = Vectorize(ifelse)( vaccine == 2, 
+                                   "1", age ), 
+          age = Vectorize(ifelse)( vaccine == 5, 
+                                   "0", age ), 
+          age = Vectorize(ifelse)( prid == 3, 
+                                   "1", age ), 
+          age = Vectorize(ifelse)( prid == 4, 
+                                   "0", age ) ) # add age group
+
+ageTbl %<>%
+  mutate( comp = -1 ) %>%
+  mutate( comp = Vectorize(ifelse)( vaccine == 3, "3", comp ), 
+          comp = Vectorize(ifelse)( vaccine == 2, "h", comp ), 
+          comp = Vectorize(ifelse)( vaccine == 5, "h", comp ), )
+
+age22LabVec <- c( "1" = "Adults", "0" = "Adolescents")
+age22ColVec <- c( "1" = "orange", "0" = "dodgerblue" )
+comp22ColVec <- c( "3" = "orange", "h" = "dodgerblue" )
+comp22LabVec <- c( "3" = "M72/AS01E", "h" = "H(56/1):IC31")
+```
+
+```{r 2.2-size-uv-both, eval = FALSE}
+# plot
+set.seed(2)
+scaleFactor = 0.56^-1
+legendTextSize = 8 * scaleFactor
+stripTextSize = 8 * scaleFactor
+axisTitleTextSize = 8 * scaleFactor
+fontScaleFactor = 0.65 * scaleFactor 
+startTime <- proc.time()[3]
+ggbootUV( data = ageTbl, 
+  resp = resp, xAxis = comp, col = comp, facet = infxn, diff = age, pMethod = "percT", ciMethod = "bca",
+  B = 1e4, altSide = 'high', eqErrBarWidth = TRUE, errBarLineType = "11", remXAxisMarks = TRUE, seB = 5e2, calcStat = "mean", trim = 0.2,
+  rotXText = TRUE, pointSize = 3, errBarSize = 1.5, yLab = "Increase in vaccine-induced memory\nCD4 T cell response (%) for adults over adolescents", 
+  nullValue = 0, xLab = "Vaccine", xAxisLabVec = comp22LabVec, errBarAlpha = 0.88,
+  colLabName = "", colourVec = comp22ColVec, colLabVec = comp22LabVec, 
+  facetLabVec = infLabelVec, nCol = 3, facetScale = 'free_x', fontScaleFactor = fontScaleFactor, 
+  lineScaleFactor = 2, plotTblName = "fig3aTbl" ) +
+  theme( legend.key.height = unit( 6, "mm" ), 
+    legend.key.width = unit( 9, "mm" ), 
+    legend.text = element_text( size = legendTextSize ),
+    strip.text = element_text( size = stripTextSize, colour = 'black' ), 
+    legend.title = element_blank(), 
+    legend.text.align = 0, 
+    axis.title = element_text( size = axisTitleTextSize), 
+    strip.background = element_rect(linetype = 'solid', size = 1, fill = 'white', 
+       colour = 'white' ) ) + 
+    guides( linetype = guide_legend(override.aes = list(size=1.8)), 
+      colour = guide_legend( order = 1 ) )  
+proc.time()[3] - startTime
+cowplot::ggsave( "C:/Users/migue/Dropbox/Rodo et al Vaccine Immune Response paper/Figures/Revisions/R/size-uv-age-diff-2.pdf", units = "cm", width = 16, height= 13, scale = 1 )
+
+```
+
+## 3.4
+
+### Stats
+
+#### Pre-vaccination
+
+Prepare the data to calculate the statistics for the pre-vaccination responses. 
+```{r 3.4-pv-data}
+# infected
+
+## long table
+lTbl1 = bl17ExcITbl %>%
+  filter( cd == 4 & infxn == 1 ) %>%
+  mutate( cytCombo = str_sub( cytCombo, 4 ), 
+          vaccStim = str_c( vaccine, stim ) ) %>%
+  group_by(  vaccine, infxn, ptid, stim, vaccStim ) %>%
+  summarise( resp = sum( resp ) ) %>% 
+  ungroup() 
+
+# uninfected
+
+## long table
+lTbl0 = bl17ExcITbl %>%
+  filter( cd == 4 & infxn == 0 ) %>%
+  mutate( cytCombo = str_sub( cytCombo, 4 ), 
+          vaccStim = str_c( vaccine, stim ) ) %>%
+  group_by(  vaccine, infxn, ptid, stim, vaccStim ) %>%
+  summarise( resp = sum( resp ) ) %>% 
+  ungroup() 
+
+```
+
+Use `ggboot::ggbootUV` to calculate the point estimates, confidence intervals and statistical significance, and save as table `fig34PVTbl`.
+```{r 3.4-pv-stats}
+# plot
+set.seed(2)
+scaleFactor = 0.56^-1
+legendTextSize = 8 * scaleFactor
+stripTextSize = 8 * scaleFactor
+axisTitleTextSize = 8 * scaleFactor
+fontScaleFactor = 0.56 * scaleFactor
+xAxisTextSize = 8 * scaleFactor
+p0 = ggbootUV( data = full_join( lTbl0, lTbl1 ), 
+  resp = resp, xAxis = vaccStim, col = vaccine, facet = infxn, pMethod = "percT", ciMethod = "bca",
+  B = 1e4, altSide = 'high', eqErrBarWidth = TRUE, errBarLineType = "11", remXAxisMarks = FALSE, seB = 5e2, calcStat = "mean", trim = 0.2,
+  rotXText = TRUE, pointSize = 3, errBarSize = 1.5, yLab = "Pre-vaccination\nCD4 T cell response (%)", 
+  nullValue = 0.005, xLab = "Vaccine", xAxisLabVec = vaccStim2StimLabVec, errBarAlpha = 0.88,
+  colLabName = "", colourVec = vaccColVec, colLabVec = fullVaccLabelVec, 
+  facetLabVec = infLabelVec, nCol = 3, facetScale = 'free_x', fontScaleFactor = fontScaleFactor, 
+  lineScaleFactor = 2, plotTblName = "fig34PVTbl" ) +
+  theme( legend.key.height = unit( 6, "mm" ), 
+    legend.key.width = unit( 9, "mm" ), 
+    legend.text = element_text( size = legendTextSize ),
+    strip.text = element_text( size = stripTextSize, colour = 'black' ), 
+    legend.title = element_blank(), 
+        legend.text.align = 0, 
+    axis.title = element_text( size = axisTitleTextSize), 
+    strip.background = element_rect(linetype = 'solid', size = 1, fill = 'white', 
+       colour = 'white' ), 
+    axis.text.x = element_text( hjust = 1, angle = 90, vjust = 0.45 ) ) + 
+    guides( linetype = guide_legend(override.aes = list(size=1.8)), 
+      colour = guide_legend( order = 1 ) )  
+```
+
+#### Vaccine-induced memory
+
+Prepare the data to calculate the statistics for the vaccine-induced memory responses. 
+```{r 3.4-vim-data}
+# infected
+
+## long table
+lTbl1 = tmaxSub17ExcITbl %>%
+  filter( cd == 4 & infxn == 1 ) %>%
+  mutate( cytCombo = str_sub( cytCombo, 4 ), 
+          vaccStim = str_c( vaccine, stim ) ) %>%
+  group_by(  vaccine, infxn, ptid, stim, vaccStim ) %>%
+  summarise( resp = sum( resp ) ) %>% 
+  ungroup() 
+
+# uninfected
+
+## long table
+lTbl0 = tmaxSub17ExcITbl %>%
+  filter( cd == 4 & infxn == 0 ) %>%
+  mutate( cytCombo = str_sub( cytCombo, 4 ), 
+          vaccStim = str_c( vaccine, stim ) ) %>%
+  group_by(  vaccine, infxn, ptid, stim, vaccStim ) %>%
+  summarise( resp = sum( resp ) ) %>% 
+  ungroup() 
+
+```
+
+Use `ggboot::ggbootUV` to calculate the point estimates, confidence intervals and statistical significance, and save as table `fig34VIMTbl`.
+```{r 3.4-vim-stats}
+# plot
+set.seed(2)
+scaleFactor = 0.56^-1
+legendTextSize = 8 * scaleFactor
+stripTextSize = 8 * scaleFactor
+axisTitleTextSize = 8 * scaleFactor
+fontScaleFactor = 0.56 * scaleFactor
+xAxisTextSize = 8 * scaleFactor
+p0 = ggbootUV( data = full_join( lTbl0, lTbl1 ) %>% filter( vaccine != 8 ), 
+  resp = resp, xAxis = vaccStim, col = vaccine, facet = infxn, pMethod = "percT", ciMethod = "bca",
+  B = 1e5, altSide = 'high', eqErrBarWidth = TRUE, errBarLineType = "11", remXAxisMarks = FALSE, seB = 5e2, calcStat = "mean", trim = 0.2,
+  rotXText = TRUE, pointSize = 3, errBarSize = 1.5, yLab = "Vaccine-induced memory\nCD4 T cell response (%)", 
+  nullValue = 0, xLab = "Vaccine", xAxisLabVec = vaccStim2StimLabVec, errBarAlpha = 0.88,
+  colLabName = "", colourVec = vaccColVec, colLabVec = fullVaccLabelVec, 
+  facetLabVec = infLabelVec, nCol = 3, facetScale = 'free_x', fontScaleFactor = fontScaleFactor, 
+  lineScaleFactor = 2, plotTblName = "fig34VIMTbl" ) +
+  theme( legend.key.height = unit( 6, "mm" ), 
+    legend.key.width = unit( 9, "mm" ), 
+    legend.text = element_text( size = legendTextSize ),
+    strip.text = element_text( size = stripTextSize, colour = 'black' ), 
+    legend.title = element_blank(), 
+    axis.title = element_text( size = axisTitleTextSize), 
+    strip.background = element_rect(linetype = 'solid', size = 1, fill = 'white', 
+       colour = 'white' ), 
+    legend.text.align = 0, 
+    axis.text.x = element_text( hjust = 1, angle = 90, vjust = 0.45 ) ) + 
+    guides( linetype = guide_legend(override.aes = list(size=1.8)), 
+      colour = guide_legend( order = 1 ) )  
+```
+
+### Plots
+
+#### Data 
+
+Prepare `fig34PVTbl` and `fig34VIMTbl` for plotting. Result saved as `fig34Tbl`. 
+```{r 3.4-data}
+fig34Tbl <- bind_rows( fig34PVTbl %>% 
+                         mutate( timePoint = 0 ), 
+                       fig34VIMTbl %>%
+                         mutate( timePoint = 1 ) ) %>% # set timePoint variable to distinguish pre-vaccination from vaccine-induced memory response
+  mutate( vaccine = str_sub( split, start = -3, end = -3 ), 
+          infxn = str_sub( split, start = -1, end = -1 ) ) # get vaccine and infxn status from split variable
+```
+
+#### Ag85
+
+Plot the point estimates, confidence intervals and statistical significance of the pre-vaccination and vaccine-induced memory responses for the vaccines containing Ag85A/B, using `fig34PVTbl` and `fig34VIMTbl` obtained above. 
+```{r 3.4-ag85-plot}
+scaleFactor <- scaleFactor = 0.56^-1
+p0 <- ggplot( fig34Tbl %>%
+                 filter( timePoint == "0" &
+                           str_detect( split, "ag85" ) ), aes( x = vaccine, col = vaccine ) ) +
+  geom_hline( yintercept = 0, linetype = 'dashed', 0.6 ) +
+  geom_point( aes( y = origStat ), size = 2 ) +
+  geom_errorbar( aes( ymin = lb, ymax = ub, linetype = sig  ), size = 1, alpha = 0.88 ) +
+  facet_wrap( ~infxn, ncol = 2, labeller = labeller( infxn = infLabelVec ) ) +
+  theme( axis.text.x = element_blank(), 
+         axis.ticks.x = element_blank(), 
+         legend.key.width = unit( 6, "mm" ), 
+    strip.text = element_text( size = 8 * scaleFactor, colour = 'black' ), 
+    legend.title = element_blank(), 
+    axis.title = element_text( size = 8 * scaleFactor ), 
+    strip.background = element_rect( linetype = 'solid', size = 1, fill = 'white', 
+       colour = 'white' ), 
+    legend.text = element_text( size = 8 * scaleFactor) ) +
+  labs( x = "Vaccine", y = "Pre-vaccination\nCD4 T cell response (%)" ) +
+  scale_colour_manual( labels = fullVaccLabelVec, 
+                       values = vaccColVec ) +
+  scale_linetype_manual( labels = c( "0" = "Not significant", "1" = "Significant" ),
+        values = c( "0" = "dotted", '1' = 'solid' ),
+        drop = FALSE,
+        limits = c( "0", "1" ) )
+
+p1 <- ggplot( fig34Tbl %>%
+                 filter( timePoint == "1" &
+                           str_detect( split, "ag85" ) ), aes( x = vaccine, col = vaccine ) ) +
+  geom_hline( yintercept = 0, linetype = 'dashed', 0.6 ) +
+  geom_point( aes( y = origStat ), size = 2 ) +
+  geom_errorbar( aes( ymin = lb, ymax = ub, linetype = sig  ), size = 1, alpha = 0.88 ) +
+  facet_wrap( ~infxn, ncol = 2, labeller = labeller( infxn = infLabelVec ) ) +
+  theme( axis.text.x = element_blank(), 
+         axis.ticks.x = element_blank(), 
+         legend.key.width = unit( 6, "mm" ), 
+    strip.text = element_text( size = 8 * scaleFactor, colour = 'black' ), 
+    legend.title = element_blank(), 
+    axis.title = element_text( size = 8 * scaleFactor ), 
+    strip.background = element_rect( linetype = 'solid', size = 1, fill = 'white', 
+       colour = 'white' ), 
+    legend.text = element_text( size = 8 * scaleFactor) ) +
+  labs( x = "Vaccine", y = "Vaccine-induced memory\nCD4 T cell response (%)" ) +
+  scale_colour_manual( labels = fullVaccLabelVec, 
+                       values = vaccColVec ) +
+  scale_linetype_manual( labels = c( "0" = "Not significant", "1" = "Significant" ),
+        values = c( "0" = "dotted", '1' = 'solid' ),
+        drop = FALSE,
+        limits = c( "0", "1" ) )
+
+p2 <- plot_grid( p0, p1, ncol = 1, labels = c( "A", "B" ) )
+```
+
+Save the above plot as S10_Fig.pdf into Dropbox/Rodo et al Vaccine Immune Response Paper/Figures/Final/R.
+```{r  3.4-ag85-save, eval = save, echo = FALSE, dependson = c( "setup", "save" )}
+cowplot::ggsave( getSavePath( "S10_Fig" ), units = "cm", width = 13, height= 10, scale = 1.85, dpi = 300 )
+```
+
+#### ESAT-6
+
+Plot the point estimates, confidence intervals and statistical significance of the pre-vaccination and vaccine-induced memory responses for the vaccines containing Ag85A/B, using `fig34PVTbl` and `fig34VIMTbl` obtained above. 
+```{r 3.4-ag85-plot}
+scaleFactor <- scaleFactor = 0.56^-1
+p0 <- ggplot( fig34Tbl %>%
+                 filter( timePoint == "0" &
+                           str_detect( split, "esat6" ) ), aes( x = vaccine, col = vaccine ) ) +
+  geom_hline( yintercept = 0, linetype = 'dashed', 0.6 ) +
+  geom_point( aes( y = origStat ), size = 2 ) +
+  geom_errorbar( aes( ymin = lb, ymax = ub, linetype = sig  ), size = 1, alpha = 0.88 ) +
+  facet_wrap( ~infxn, ncol = 2, labeller = labeller( infxn = infLabelVec ) ) +
+  theme( axis.text.x = element_blank(), 
+         axis.ticks.x = element_blank(), 
+         legend.key.width = unit( 6, "mm" ), 
+    strip.text = element_text( size = 8 * scaleFactor, colour = 'black' ), 
+    legend.title = element_blank(), 
+    axis.title = element_text( size = 8 * scaleFactor ), 
+    strip.background = element_rect( linetype = 'solid', size = 1, fill = 'white', 
+       colour = 'white' ), 
+    legend.text = element_text( size = 8 * scaleFactor) ) +
+  labs( x = "Vaccine", y = "Pre-vaccination\nCD4 T cell response (%)" ) +
+  scale_colour_manual( labels = fullVaccLabelVec, 
+                       values = vaccColVec ) +
+  scale_linetype_manual( labels = c( "0" = "Not significant", "1" = "Significant" ),
+        values = c( "0" = "dotted", '1' = 'solid' ),
+        drop = FALSE,
+        limits = c( "0", "1" ) )
+
+p1 <- ggplot( fig34Tbl %>%
+                 filter( timePoint == "1" &
+                           str_detect( split, "esat6" ) ), aes( x = vaccine, col = vaccine ) ) +
+  geom_hline( yintercept = 0, linetype = 'dashed', 0.6 ) +
+  geom_point( aes( y = origStat ), size = 2 ) +
+  geom_errorbar( aes( ymin = lb, ymax = ub, linetype = sig  ), size = 1, alpha = 0.88 ) +
+  facet_wrap( ~infxn, ncol = 2, labeller = labeller( infxn = infLabelVec ) ) +
+  theme( axis.text.x = element_blank(), 
+         axis.ticks.x = element_blank(), 
+         legend.key.width = unit( 6, "mm" ), 
+    strip.text = element_text( size = 8 * scaleFactor, colour = 'black' ), 
+    legend.title = element_blank(), 
+    axis.title = element_text( size = 8 * scaleFactor ), 
+    strip.background = element_rect( linetype = 'solid', size = 1, fill = 'white', 
+       colour = 'white' ), 
+    legend.text = element_text( size = 8 * scaleFactor) ) +
+  labs( x = "Vaccine", y = "Vaccine-induced memory\nCD4 T cell response (%)" ) +
+  scale_colour_manual( labels = fullVaccLabelVec, 
+                       values = vaccColVec ) +
+  scale_linetype_manual( labels = c( "0" = "Not significant", "1" = "Significant" ),
+        values = c( "0" = "dotted", '1' = 'solid' ),
+        drop = FALSE,
+        limits = c( "0", "1" ) )
+
+p2 <- plot_grid( p0, p1, ncol = 1, labels = c( "A", "B" ) )
+```
+
+Save the above plot as S11_Fig.pdf into Dropbox/Rodo et al Vaccine Immune Response Paper/Figures/Final/R.
+```{r  3.4-ag85-save, eval = save, echo = FALSE, dependson = c( "setup", "save" )}
+cowplot::ggsave( getSavePath( "S11_Fig" ), units = "cm", width = 13, height= 10, scale = 1.85, dpi = 300 )
+```
+
+
+
+
+

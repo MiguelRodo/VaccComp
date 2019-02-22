@@ -68,7 +68,7 @@ fontScaleFactor = 0.56 * scaleFactor
 axisTitleTextSize = 8 * scaleFactor
 p0 = ggbootUV( data = full_join( lTbl0, lTbl1 ), 
   resp = resp, xAxis = vaccine, col = vaccine, facet = infxn, pMethod = "percT", ciMethod = "bca",
-  B = 2e3 * 5, altSide = 'high', eqErrBarWidth = TRUE, errBarLineType = "11", remXAxisMarks = TRUE, seB = 2e2 * 2.5, calcStat = "mean", trim = 0.2,
+  B = 1e1, altSide = 'high', eqErrBarWidth = TRUE, errBarLineType = "11", remXAxisMarks = TRUE, seB = 2e2 * 2.5, calcStat = "mean", trim = 0.2,
   rotXText = TRUE, pointSize = 3, errBarSize = 1.75, yLab = "Pre-vaccination\nCD4 T cell response (%)", 
   nullValue = 0.005, xLab = "Vaccine", xAxisLabVec = vaccStim2StimLabVec, errBarAlpha = 0.88,
   colLabName = "", colourVec = vaccColVec, colLabVec = fullVaccLabelVec, bootSECorr = FALSE,
@@ -138,8 +138,6 @@ plot_grid( p0, p1, ncol = 1, align = "v", labels = c( "A", "B" ), label_size = 1
 ```{r Fig1-save, eval = save, echo = FALSE, dependson = c( "setup", "save" )}
 cowplot::ggsave( getSavePath( "Fig1" ), units = "cm", width = 13, height= 10, scale = 1.85, dpi = 300 )
 ```
-
-
 
 ____________________________________________________________
 
@@ -405,7 +403,7 @@ ggplot( longPlotTbl, aes( x = timePoint, col = cd, linetype = infxn ) ) +
   scale_colour_manual( name = "", 
     values = c( "4" = "orange", "8" = "royalblue1" ),
       labels = c( "4" = "CD4          ", "8" = "CD8") ) +
-  labs( x = "Time since first vaccination", y = "T cell response (%)" ) +
+  labs( x = "Days since first vaccination", y = "T cell response (%)" ) +
   theme_cowplot( line_size = 1 ) +
     theme( legend.key.height = unit( 6, "mm" ), 
     legend.key.width = unit( 10, "mm" ), 
@@ -604,11 +602,72 @@ cowplot::ggsave( "C:/Users/migue/Dropbox/Rodo et al Vaccine Immune Response pape
 
 
 
+
+
+
+______________________________________________________________
+
+S4 Fig - Effect of Mtb infection on vaccine-induced memory response size, by vaccine
+
+#### Effect of baseline Mtb infection
+
+```{r }
+# infected
+
+## long table
+lTbl1 = tmaxSub17ExcTbl %>%
+  filter( cd == 4 & infxn == 1 ) %>%
+  group_by(  vaccine, infxn, ptid ) %>%
+  summarise( resp = sum( resp ) ) %>% 
+  ungroup() 
+
+# uninfected
+
+## long table
+lTbl0 = tmaxSub17ExcTbl %>%
+  filter( cd == 4 & infxn == 0 ) %>%
+  group_by(  vaccine, infxn, ptid ) %>%
+  summarise( resp = sum( resp ) ) %>% 
+  ungroup() 
+```
+
+```{r S4_Fig}
+set.seed(2)
+scaleFactor = 0.55^-1
+ggbootUV( data = full_join( lTbl0, lTbl1 ) %>% filter( vaccine %in% 2:6 ), 
+  resp = resp, xAxis = vaccine, col = vaccine, diff = infxn, pMethod = "percT", ciMethod = "bca",
+  B = 2e3 * 5, altSide = 'both', eqErrBarWidth = TRUE, errBarLineType = "11", remXAxisMarks = TRUE, seB = 2e2 * 2.5, calcStat = "mean", trim = 0.2,
+  rotXText = TRUE, pointSize = 3, errBarSize = 1.5, yLab = "Change in vaccine-induced memory\nCD4 T cell response (%) (infected vs uninfected)", 
+  nullValue = 0, xLab = "Vaccine", xAxisLabVec = vaccStim2StimLabVec, errBarAlpha = 0.88,
+  colLabName = "", colourVec = vaccColVec, colLabVec = fullVaccLabelVec, 
+  facetLabVec = infLabelVec, nCol = 3, facetScale = 'free_x', fontScaleFactor = 2, 
+  lineScaleFactor = 1.5, plotTblName = "figs5Tbl" ) +
+  theme( legend.key.height = unit( 6, "mm" ), 
+    legend.key.width = unit( 9, "mm" ), 
+    legend.text = element_text( size = 8 * scaleFactor ),
+    axis.text = element_text( size = 8 * scaleFactor ), 
+    legend.title = element_blank(), 
+    legend.text.align = 0, 
+    axis.title = element_text( size = 8 * scaleFactor ), 
+    strip.background = element_rect(linetype = 'solid', size = 1, fill = 'white', 
+       colour = 'white' ) ) + 
+    guides( linetype = guide_legend(override.aes = list(size=1.8)), 
+      colour = guide_legend( order = 1 ) )  
+
+cowplot::ggsave( "C:/Users/migue/Dropbox/Rodo et al Vaccine Immune Response paper/Figures/Final/R/S5_Fig.pdf", units = "cm", width = 10, height= 7, scale = 2 )
+```
+
+
+
+
+
+
+
 ____________________________________________________________
 
-S4 Fig - Vaccine-induced memory response size, by stim
+S5 Fig - Vaccine-induced memory response size, by stim
 
-# Summed
+# Stim
 
 ## CD4
 
@@ -637,7 +696,7 @@ lTbl0 = tmaxSub17ExcITbl %>%
 
 ```
     
-```{r S4A_Fig}
+```{r S5A_Fig}
 # plot
 set.seed(2)
 scaleFactor = 0.56^-1
@@ -694,7 +753,7 @@ lTbl0 = tmaxSub17ExcITbl %>%
   ungroup() 
 ```
     
-```{r S4B_Fig}
+```{r S5B_Fig}
 # plot
 set.seed(2)
 p1 = ggbootUV( data = full_join( lTbl0, lTbl1 ) %>% filter( vaccine != 8 ), 
@@ -721,70 +780,9 @@ p1 = ggbootUV( data = full_join( lTbl0, lTbl1 ) %>% filter( vaccine != 8 ),
 
 ## Combined CD4 and CD8
 
-```{r S4_Fig}
-plot_grid( p0, p1, ncol = 1, align = "v", labels = c( "A", "B" ), label_size = 12 * scaleFactor )
-cowplot::ggsave( "C:/Users/migue/Dropbox/Rodo et al Vaccine Immune Response paper/Figures/Final/R/S4_Fig.pdf", units = "cm", width = 13, height= 14, scale = 1.85, dpi = 300 )
-```
-
-
-
-
-
-
-
-
-
-
-______________________________________________________________
-
-S5 Fig - Effect of Mtb infection on vaccine-induced memory response size, by vaccine
-
-#### Effect of baseline Mtb infection
-
-```{r }
-# infected
-
-## long table
-lTbl1 = tmaxSub17ExcTbl %>%
-  filter( cd == 4 & infxn == 1 ) %>%
-  group_by(  vaccine, infxn, ptid ) %>%
-  summarise( resp = sum( resp ) ) %>% 
-  ungroup() 
-
-# uninfected
-
-## long table
-lTbl0 = tmaxSub17ExcTbl %>%
-  filter( cd == 4 & infxn == 0 ) %>%
-  group_by(  vaccine, infxn, ptid ) %>%
-  summarise( resp = sum( resp ) ) %>% 
-  ungroup() 
-```
-
 ```{r S5_Fig}
-set.seed(2)
-scaleFactor = 0.55^-1
-ggbootUV( data = full_join( lTbl0, lTbl1 ) %>% filter( vaccine %in% 2:6 ), 
-  resp = resp, xAxis = vaccine, col = vaccine, diff = infxn, pMethod = "percT", ciMethod = "bca",
-  B = 2e3 * 5, altSide = 'both', eqErrBarWidth = TRUE, errBarLineType = "11", remXAxisMarks = TRUE, seB = 200 * 2.5, calcStat = "mean", trim = 0.2,
-  rotXText = TRUE, pointSize = 3, errBarSize = 1.5, yLab = "Change in scaled vaccine-induced CD4 T cell\nresponse (%) (infected vs uninfected)", 
-  nullValue = 0, xLab = "Vaccine", xAxisLabVec = vaccStim2StimLabVec, errBarAlpha = 0.88,
-  colLabName = "", colourVec = vaccColVec, colLabVec = fullVaccLabelVec, 
-  facetLabVec = infLabelVec, nCol = 3, facetScale = 'free_x', fontScaleFactor = 2, 
-  lineScaleFactor = 1.5, plotTblName = "figs5Tbl" ) +
-  theme( legend.key.height = unit( 6, "mm" ), 
-    legend.key.width = unit( 9, "mm" ), 
-    legend.text = element_text( size = 8 * scaleFactor ),
-    axis.text = element_text( size = 8 * scaleFactor ), 
-    legend.title = element_blank(), 
-    legend.text.align = 0, 
-    axis.title = element_text( size = 8 * scaleFactor ), 
-    strip.background = element_rect(linetype = 'solid', size = 1, fill = 'white', 
-       colour = 'white' ) ) + 
-    guides( linetype = guide_legend(override.aes = list(size=1.8)), 
-      colour = guide_legend( order = 1 ) )  
-
-cowplot::ggsave( "C:/Users/migue/Dropbox/Rodo et al Vaccine Immune Response paper/Figures/Final/R/S5_Fig.pdf", units = "cm", width = 10, height= 7, scale = 2 )
+plot_grid( p0, p1, ncol = 1, align = "v", labels = c( "A", "B" ), label_size = 12 * scaleFactor )
+cowplot::ggsave( "C:/Users/migue/Dropbox/Rodo et al Vaccine Immune Response paper/Figures/Final/R/S5_Fig.pdf", units = "cm", width = 13, height= 14, scale = 1.85, dpi = 300 )
 ```
 
 
@@ -1017,27 +1015,28 @@ wNumTbl0 = wTbl0 %>% select_if( is.numeric )
 ```
     
 ```{r Fig5A}
-set.seed(2)
+set.seed(3) # was 2 initially
 scaleFactor = 2
 p0 = ggbootUV( data = lPropTbl0, 
   resp = resp, xAxis = vaccine, col = vaccine, facet = cytCombo, pMethod = "percT", ciMethod = "bca",
-  pointSize = 2, errBarSize = 1, yLab = "Scaled vaccine-induced CD4 T cell response", 
-  nullValue = 0, xLab = "Vaccine", errBarAlpha = 0.88,  altSide = 'high', B = 2e3 * 5, seB = 200 * 2.5, remXAxisMarks = TRUE,
+  B = 2e3 * 5, altSide = 'high', eqErrBarWidth = TRUE, errBarLineType = "11", remXAxisMarks = TRUE, seB = 2e2 * 2.5, calcStat = "mean", trim = 0.2,
+  pointSize = 2, errBarSize = 1, yLab = "Scaled vaccine-induced memory\nCD4 T cell response", 
+  nullValue = 0, xLab = "Vaccine", errBarAlpha = 0.88, 
   colLabName = "", colourVec = vaccColVec, colLabVec = fullVaccLabelVec, hLineFactor = 0.6,
   facetLabVec = shortCytComboLabVec, nCol = 4, facetScale = 'fixed', fontScaleFactor = 1, 
-  lineScaleFactor = 1, plotTblName = "fig5aTbl" ) +
+  lineScaleFactor = 1, plotTblName = "fig5bTbl" ) +
   theme( legend.key.height = unit( 6 * scaleFactor, "mm" ), 
     legend.key.width = unit( 6, "mm" ), 
     strip.text = element_text( size = 8 * scaleFactor, colour = 'black' ), 
     legend.title = element_blank(), 
-    axis.title = element_text( size = 8 * scaleFactor ), 
-      axis.text = element_text( size = 8 * scaleFactor),
-    strip.background = element_rect( linetype = 'solid', size = 1, fill = 'white', 
+    axis.title = element_text( size = 8* scaleFactor ), 
+    legend.text.align = 0, 
+    axis.text = element_text( size = 8* scaleFactor ),
+    strip.background = element_rect(linetype = 'solid', size = 1, fill = 'white', 
        colour = 'white' ), 
     legend.background = element_rect( colour = 'gray80', size = 1, linetype = 'solid' ),
     legend.text = element_text( size = 8 * scaleFactor), 
-    legend.text.align = 0, 
-    legend.position = 'bottom') + 
+    legend.position = 'bottom' ) + 
     guides( linetype = guide_legend(override.aes = list(size=1.8)), 
       colour = guide_legend( order = 1 ) )  
 ```
@@ -1065,8 +1064,8 @@ wNumTbl1 = wTbl1 %>% select_if( is.numeric )
 set.seed(2)
 p1 = ggbootUV( data = lPropTbl1, 
   resp = resp, xAxis = vaccine, col = vaccine, facet = cytCombo, pMethod = "percT", ciMethod = "bca",
-  B = 2e3 * 5, altSide = 'high', eqErrBarWidth = TRUE, errBarLineType = "11", remXAxisMarks = TRUE, seB = 200 * 2.5, calcStat = "mean", trim = 0.2,
-  pointSize = 2, errBarSize = 1, yLab = "Scaled vaccine-induced CD4 T cell response", 
+  B = 2e3 * 5, altSide = 'high', eqErrBarWidth = TRUE, errBarLineType = "11", remXAxisMarks = TRUE, seB = 2e2 * 2.5, calcStat = "mean", trim = 0.2,
+  pointSize = 2, errBarSize = 1, yLab = "Scaled vaccine-induced memory\nCD4 T cell response", 
   nullValue = 0, xLab = "Vaccine", errBarAlpha = 0.88, 
   colLabName = "", colourVec = vaccColVec, colLabVec = fullVaccLabelVec, hLineFactor = 0.6,
   facetLabVec = shortCytComboLabVec, nCol = 4, facetScale = 'fixed', fontScaleFactor = 1, 
