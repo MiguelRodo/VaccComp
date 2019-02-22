@@ -7,7 +7,7 @@ Maintainer: Miguel Rodo <rdxmig002@myuct.ac.za>
 Description: Contains analysis script used to compile the figures for the paper
 	'A comparison of antigen-specific T cell responses induced by six novel
 	tuberculosis vaccine candidates'.
-License: CC0
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Suggests: knitr,
