@@ -84,7 +84,7 @@ fontScaleFactor = 0.65 * scaleFactor
 startTime <- proc.time()[3]
 ggbootUV( data = ageTbl, 
   resp = resp, xAxis = comp, col = comp, facet = infxn, diff = age, pMethod = "percT", ciMethod = "bca",
-  B = 1e4, altSide = 'high', eqErrBarWidth = TRUE, errBarLineType = "11", remXAxisMarks = TRUE, seB = 5e2, calcStat = "mean", trim = 0.2,
+  B = 5e3, altSide = 'high', eqErrBarWidth = TRUE, errBarLineType = "11", remXAxisMarks = TRUE, seB = 5e2, calcStat = "mean", trim = 0.2,
   rotXText = TRUE, pointSize = 3, errBarSize = 1.5, yLab = "Increase in vaccine-induced memory\nCD4 T cell response (%) for adults over adolescents", 
   nullValue = 0, xLab = "Vaccine", xAxisLabVec = comp22LabVec, errBarAlpha = 0.88,
   colLabName = "", colourVec = comp22ColVec, colLabVec = comp22LabVec, 
@@ -150,7 +150,7 @@ fontScaleFactor = 0.56 * scaleFactor
 xAxisTextSize = 8 * scaleFactor
 p0 = ggbootUV( data = full_join( lTbl0, lTbl1 ), 
   resp = resp, xAxis = vaccStim, col = vaccine, facet = infxn, pMethod = "percT", ciMethod = "bca",
-  B = 1e4, altSide = 'high', eqErrBarWidth = TRUE, errBarLineType = "11", remXAxisMarks = FALSE, seB = 5e2, calcStat = "mean", trim = 0.2,
+  B = 5e3, altSide = 'high', eqErrBarWidth = TRUE, errBarLineType = "11", remXAxisMarks = FALSE, seB = 5e2, calcStat = "mean", trim = 0.2,
   rotXText = TRUE, pointSize = 3, errBarSize = 1.5, yLab = "Pre-vaccination\nCD4 T cell response (%)", 
   nullValue = 0.005, xLab = "Vaccine", xAxisLabVec = vaccStim2StimLabVec, errBarAlpha = 0.88,
   colLabName = "", colourVec = vaccColVec, colLabVec = fullVaccLabelVec, 
@@ -210,7 +210,7 @@ fontScaleFactor = 0.56 * scaleFactor
 xAxisTextSize = 8 * scaleFactor
 p0 = ggbootUV( data = full_join( lTbl0, lTbl1 ) %>% filter( vaccine != 8 ), 
   resp = resp, xAxis = vaccStim, col = vaccine, facet = infxn, pMethod = "percT", ciMethod = "bca",
-  B = 1e5, altSide = 'high', eqErrBarWidth = TRUE, errBarLineType = "11", remXAxisMarks = FALSE, seB = 5e2, calcStat = "mean", trim = 0.2,
+  B = 5e3, altSide = 'high', eqErrBarWidth = TRUE, errBarLineType = "11", remXAxisMarks = FALSE, seB = 5e2, calcStat = "mean", trim = 0.2,
   rotXText = TRUE, pointSize = 3, errBarSize = 1.5, yLab = "Vaccine-induced memory\nCD4 T cell response (%)", 
   nullValue = 0, xLab = "Vaccine", xAxisLabVec = vaccStim2StimLabVec, errBarAlpha = 0.88,
   colLabName = "", colourVec = vaccColVec, colLabVec = fullVaccLabelVec, 
@@ -248,7 +248,7 @@ fig34Tbl <- bind_rows( fig34PVTbl %>%
 
 Plot the point estimates, confidence intervals and statistical significance of the pre-vaccination and vaccine-induced memory responses for the vaccines containing Ag85A/B, using `fig34PVTbl` and `fig34VIMTbl` obtained above. 
 ```{r 3.4-ag85-plot}
-scaleFactor <- scaleFactor = 0.56^-1
+scaleFactor <- 0.56^-1
 p0 <- ggplot( fig34Tbl %>%
                  filter( timePoint == "0" &
                            str_detect( split, "ag85" ) ), aes( x = vaccine, col = vaccine ) ) +
@@ -308,8 +308,8 @@ cowplot::ggsave( getSavePath( "S10_Fig" ), units = "cm", width = 13, height= 10,
 #### ESAT-6
 
 Plot the point estimates, confidence intervals and statistical significance of the pre-vaccination and vaccine-induced memory responses for the vaccines containing Ag85A/B, using `fig34PVTbl` and `fig34VIMTbl` obtained above. 
-```{r 3.4-ag85-plot}
-scaleFactor <- scaleFactor = 0.56^-1
+```{r 3.4-esat6-plot}
+scaleFactor <- 0.56^-1
 p0 <- ggplot( fig34Tbl %>%
                  filter( timePoint == "0" &
                            str_detect( split, "esat6" ) ), aes( x = vaccine, col = vaccine ) ) +
@@ -362,7 +362,7 @@ p2 <- plot_grid( p0, p1, ncol = 1, labels = c( "A", "B" ) )
 ```
 
 Save the above plot as S11_Fig.pdf into Dropbox/Rodo et al Vaccine Immune Response Paper/Figures/Final/R.
-```{r  3.4-ag85-save, eval = save, echo = FALSE, dependson = c( "setup", "save" )}
+```{r  3.4-esat6-save, eval = save, echo = FALSE, dependson = c( "setup", "save" )}
 cowplot::ggsave( getSavePath( "S11_Fig" ), units = "cm", width = 13, height= 10, scale = 1.85, dpi = 300 )
 ```
 

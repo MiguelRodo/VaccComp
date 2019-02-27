@@ -1,0 +1,15 @@
+base
+VaccComp
+ggboot
+plyr
+tidyr
+stringr
+magrittr
+dplyr
+VaccCompData
+ggplot2
+cowplot
+foreach
+iterators
+doParallel
+bindrcpp
